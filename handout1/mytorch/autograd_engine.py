@@ -14,30 +14,33 @@ def backward(grad_fn, grad_of_outputs):
     """
 
     # 1) Calculate gradients of final node w.r.t. to the current nodes parents
+    if grad_fn.function_name == "AccumulateGrad" and grad_of_outputs.data.shape != grad_fn.variable.shape:
+        index_list = []
+
+        for cur_idx in range(len(grad_of_outputs.data.shape)):
+            if cur_idx > len(grad_fn.variable.shape) - 1:
+                index_list.append((0, len(grad_of_outputs.data.shape) - 1 - cur_idx))
+            elif grad_fn.variable.shape[len(grad_fn.variable.shape) - 1 - cur_idx] == 1:
+                index_list.append((1, len(grad_of_outputs.data.shape) - 1 - cur_idx))
+
+        for flag, idx in index_list:
+            if flag == 0:
+                grad_of_outputs.data = np.sum(grad_of_outputs.data, axis=idx)
+            else:
+                grad_of_outputs.data = np.sum(grad_of_outputs.data, axis=idx, keepdims=True)
     new_grads = grad_fn.apply(grad_of_outputs)
 
     # 2) Pass gradient onto current node's beloved parents (recursive DFS)
     for idx in range(len(grad_fn.next_functions)):
         if not grad_fn.next_functions[idx]:
             continue
-        if grad_fn.next_functions[idx].function_name == "AccumulateGrad" and \
-                new_grads[idx].shape != grad_fn.next_functions[idx].variable.shape:
-            # We need to reshape current gradient.
-            size1 = reduce(lambda x, y: x*y, grad_fn.next_functions[idx].variable.shape)
-            size2 = reduce(lambda x, y: x*y, new_grads[idx].shape)
-            coefficient = size2 / size1
-            cur_grad = grad_of_outputs.data
-            for _ in range(len(grad_of_outputs.shape)):
-                cur_grad = cur_grad[0]
-            new_grad = np.ones(grad_fn.next_functions[idx].variable.shape) * cur_grad * coefficient
-        else:
-            new_grad = new_grads[idx]
-        backward(grad_fn.next_functions[idx], new_grad)
+        backward(grad_fn.next_functions[idx], new_grads[idx])
 
 
 class Function:
     """Superclass for linking nodes to the computational graph.
     Operations in `functional.py` should inherit from this"""
+
     @staticmethod
     def forward(ctx, *args):
         raise NotImplementedError("All subclasses must implement forward")
@@ -91,11 +94,12 @@ class AccumulateGrad:
     Args:
         tensor (Tensor): The tensor where the gradients are accumulated in `.grad`
     """
-    def __init__(self, tensor):
-        self.variable = tensor # tensor to wrap around
-        self.next_functions = [] # node types of current node's children (generally empty)
 
-        self.function_name = "AccumulateGrad" # just for convenience lol
+    def __init__(self, tensor):
+        self.variable = tensor  # tensor to wrap around
+        self.next_functions = []  # node types of current node's children (generally empty)
+
+        self.function_name = "AccumulateGrad"  # just for convenience lol
 
     def apply(self, arg):
         """Accumulates gradient provided.
@@ -115,6 +119,7 @@ class AccumulateGrad:
         # print('var:', self.variable.data, '\ngrad:', self.variable.grad)
         assert shape == grad_shape, (shape, grad_shape)
 
+
 class ContextManager:
     """Used to pass variables between a function's `.forward()` and `.backward()`.
     (Argument "ctx" in these functions)
@@ -125,8 +130,9 @@ class ContextManager:
     To store other variables (like integers):
     # >>> ctx.<some_name> = <some_variable>
     """
+
     def __init__(self):
-        self.saved_tensors = [] # list that TENSORS get stored in
+        self.saved_tensors = []  # list that TENSORS get stored in
 
     def save_for_backward(self, *args):
         """Saves TENSORS only
@@ -137,7 +143,9 @@ class ContextManager:
         for arg in args:
             # Raises error if arg is not tensor (i warned you)
             if type(arg).__name__ != "Tensor":
-                raise Exception("Got type {} of object {}. \nOnly Tensors should be saved in save_for_backward. For saving constants, just save directly as a new attribute.".format(type(arg), arg))
+                raise Exception(
+                    "Got type {} of object {}. \nOnly Tensors should be saved in save_for_backward. For saving constants, just save directly as a new attribute.".format(
+                        type(arg), arg))
 
             self.saved_tensors.append(arg.copy())
 
@@ -148,8 +156,9 @@ class BackwardFunction:
         cls (subclass of Function): Operation being run. Don't worry about this;
                                     already handled in Function.apply()
     """
+
     def __init__(self, cls):
-        self.ctx = ContextManager() # Just in case args need to be passed (see above)
+        self.ctx = ContextManager()  # Just in case args need to be passed (see above)
         self._forward_cls = cls
 
         # Node types of children, populated in `Function.apply`

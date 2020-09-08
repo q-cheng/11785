@@ -14,24 +14,24 @@ debug your code."""
 def main():
     """Runs test methods in order shown below."""
     # test four basic ops
-    # test_add()
-    # test_sub()
-    # test_mul()
-    # test_div()
+    test_add()
+    test_sub()
+    test_mul()
+    test_div()
 
     # you probably want to verify
     # any other ops you create...
 
 
     # test autograd
-    # test1()
-    # test2()
-    # test3()
-    # test4()
-    # test5()
-    # test6()
-    # test7()
-    # test8()
+    test1()
+    test2()
+    test3()
+    test4()
+    test5()
+    test6()
+    test7()
+    test8()
 
     # for when you might want it...
     testbroadcast()
@@ -193,18 +193,18 @@ def testbroadcast():
     # shape of tensor to test
 
     # get mytorch and torch tensor: 'a'
-    a = Tensor.randn(3, 4)
+    a = Tensor.randn(2, 3, 4)
     a.requires_grad = True
     a_torch = get_same_torch_tensor(a)
 
     # get mytorch and torch tensor: 'b'
-    b = Tensor.randn(4)
+    b = Tensor.randn(1, 3, 1)
     b.requires_grad = True
     b_torch = get_same_torch_tensor(b)
 
     # run mytorch and torch forward: 'c = a + b'
-    c = a + b
-    c_torch = a_torch + b_torch
+    c = a / b
+    c_torch = a_torch / b_torch
     # print('a', a, '\nb', b, '\nc', c)
     # run mytorch and torch addition backward
     c.backward()
@@ -214,7 +214,6 @@ def testbroadcast():
     assert check_val_and_grad(c, c_torch)
     # check that dc/da and dc/db respectively match
     assert check_val_and_grad(a, a_torch)
-    print(b.grad, b_torch.grad)
     assert check_val_and_grad(b, b_torch)
 
 
