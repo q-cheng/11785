@@ -1,3 +1,5 @@
+from functools import reduce
+
 import numpy as np
 
 
@@ -12,17 +14,6 @@ def backward(grad_fn, grad_of_outputs):
     """
 
     # 1) Calculate gradients of final node w.r.t. to the current nodes parents
-    # if grad_fn.function_name == "AccumulateGrad" and grad_fn.variable.data.shape != grad_of_outputs.data.shape:
-    #     # if len(grad_fn.variable.shape) < len(grad_of_outputs.shape):
-    #     #     new_shape = [1 for _ in range(len(grad_of_outputs.shape))]
-    #     #     for i in range(len(grad_fn.variable.shape)):
-    #     #         new_shape[len(new_shape) - 1 - i] = grad_fn.variable.shape[len(grad_fn.variable.shape) - 1 - i]
-    #     cur_grad = grad_of_outputs.data
-    #     for _ in range(len(grad_of_outputs.shape)):
-    #         cur_grad = cur_grad[0]
-    #     new_grad = np.ones(grad_fn.variable.shape) * cur_grad
-    #     grad_of_outputs.data = new_grad
-    # print(grad_of_outputs.data)
     new_grads = grad_fn.apply(grad_of_outputs)
 
     # 2) Pass gradient onto current node's beloved parents (recursive DFS)
@@ -31,10 +22,14 @@ def backward(grad_fn, grad_of_outputs):
             continue
         if grad_fn.next_functions[idx].function_name == "AccumulateGrad" and \
                 new_grads[idx].shape != grad_fn.next_functions[idx].variable.shape:
+            # We need to reshape current gradient.
+            size1 = reduce(lambda x, y: x*y, grad_fn.next_functions[idx].variable.shape)
+            size2 = reduce(lambda x, y: x*y, new_grads[idx].shape)
+            coefficient = size2 / size1
             cur_grad = grad_of_outputs.data
             for _ in range(len(grad_of_outputs.shape)):
                 cur_grad = cur_grad[0]
-            new_grad = np.ones(grad_fn.next_functions[idx].variable.shape) * cur_grad
+            new_grad = np.ones(grad_fn.next_functions[idx].variable.shape) * cur_grad * coefficient
         else:
             new_grad = new_grads[idx]
         backward(grad_fn.next_functions[idx], new_grad)
