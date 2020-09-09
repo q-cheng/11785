@@ -1,10 +1,11 @@
 from mytorch.nn.module import Module
 
+
 class Sequential(Module):
     """Passes input data through stored layers, in order
 
-    >>> model = Sequential(Linear(2,3), ReLU())
-    >>> model(x)
+    # >>> model = Sequential(Linear(2,3), ReLU())
+    # >>> model(x)
     <output after linear then relu>
 
     Inherits from:
@@ -45,4 +46,6 @@ class Sequential(Module):
         Returns:
             Tensor: Output after passing through layers
         """
-        raise Exception("TODO!") # loop through self.layers...
+        for layer in self.layers:
+            x = layer.forward(x)
+        return x

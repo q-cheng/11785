@@ -7,8 +7,8 @@ from mytorch.tensor import Tensor
 class Linear(Module):
     """A linear layer (aka 'fully-connected' or 'dense' layer)
     
-    >>> layer = Linear(2,3)
-    >>> layer(Tensor.ones(10,2)) # (batch_size, in_features)
+    # >>> layer = Linear(2,3)
+    # >>> layer(Tensor.ones(10,2)) # (batch_size, in_features)
     <some tensor output with size (batch_size, out_features)>
     
     Args:
@@ -43,4 +43,5 @@ class Linear(Module):
         Returns:        
             Tensor: (batch_size, out_features)
         """
-        raise Exception("TODO: Implement forward by calling the operations you've made")
+        # print(x, self.weight, self.weight)
+        return x @ self.weight + self.bias

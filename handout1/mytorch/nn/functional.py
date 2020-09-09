@@ -252,13 +252,19 @@ def check(a, b):
     if a.shape == b.shape:
         return True
     else:
+        # try:
+        #     np.broadcast(a, b)
+        # except:
+        #     raise Exception("Could not broadcast matrix with shape {} and shape {}".format(a.shape, b.shape))
         if len(a.shape) > len(b.shape):
             new_b = [1 for _ in range(len(a.shape))]
-            new_b[-len(b.shape):] = b.shape
+            for idx in range(len(b.shape)):
+                new_b[len(new_b) - 1 - idx] = b.shape[len(b.shape) - 1 - idx]
             new_a = a.shape
         else:
             new_a = [1 for _ in range(len(b.shape))]
-            new_a[-len(a.shape):] = a.shape
+            for idx in range(len(b.shape)):
+                new_a[len(new_a) - 1 - idx] = b.shape[len(b.shape) - 1 - idx]
             new_b = b.shape
         for i in range(len(new_a)):
             if new_a[i] == new_b[i] or min(new_a[i], new_b[i]) == 1:
@@ -268,3 +274,62 @@ def check(a, b):
         return True
 
 
+class ReLu(Function):
+    @staticmethod
+    def forward(ctx, x):
+        if not type(x).__name__ == 'Tensor':
+            raise Exception("args must be Tensors.")
+        requires_grad = x.requires_grad
+
+        # Save inputs to access later in backward pass.
+        ctx.save_for_backward(x)
+
+        x.data[x.data < 0] = 0
+        c = tensor.Tensor(x.data, requires_grad=requires_grad,
+                          is_leaf=not requires_grad)
+        return c
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # retrieve forward inputs that we stored
+        x = ctx.saved_tensors
+
+        # calculate gradient of output w.r.t. each input
+        grad_reLu = x.copy()
+        grad_reLu = grad_output
+        grad_x = np.ones(x.shape) * grad_output.data * x.data
+
+        # the order of gradients returned should match the order of the arguments
+        return tensor.Tensor(grad_x)
+
+
+class Matmul(Function):
+    @staticmethod
+    def forward(ctx, a, b):
+        # Check that both args are tensors
+        if not (type(a).__name__ == 'Tensor' and type(b).__name__ == 'Tensor'):
+            raise Exception("Both args must be Tensors: {}, {}".format(type(a).__name__, type(b).__name__))
+
+        # Check whether these two tensor could divide.
+        if not check(a.data, b.data):
+            raise Exception("Both args must have valid sizes: {}, {}".format(a.shape, b.shape))
+
+        # Save inputs to access later in backward pass.
+        ctx.save_for_backward(a, b)
+
+        requires_grad = a.requires_grad or b.requires_grad
+        c = tensor.Tensor(np.dot(a.data, b.data.T), requires_grad=requires_grad,
+                          is_leaf=not requires_grad)
+        return c
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # retrieve forward inputs that we stored
+        a, b = ctx.saved_tensors
+
+        # calculate gradient of output w.r.t. each input
+        grad_a = np.ones(a.shape) * grad_output.data / b.data
+        grad_b = -1 * np.ones(b.shape) * grad_output.data * a.data / (b.data * b.data)
+
+        # the order of gradients returned should match the order of the arguments
+        return tensor.Tensor(grad_a), tensor.Tensor(grad_b)

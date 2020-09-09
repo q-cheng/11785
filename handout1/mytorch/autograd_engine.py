@@ -1,5 +1,3 @@
-from functools import reduce
-
 import numpy as np
 
 
@@ -14,7 +12,7 @@ def backward(grad_fn, grad_of_outputs):
     """
 
     # 1) Calculate gradients of final node w.r.t. to the current nodes parents
-    if grad_fn.function_name == "AccumulateGrad" and grad_of_outputs.data.shape != grad_fn.variable.shape:
+    if grad_fn and grad_fn.function_name == "AccumulateGrad" and grad_of_outputs.data.shape != grad_fn.variable.shape:
         index_list = []
 
         for cur_idx in range(len(grad_of_outputs.data.shape)):

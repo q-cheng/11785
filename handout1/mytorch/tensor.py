@@ -167,3 +167,17 @@ class Tensor:
             Tensor: result after div
         """
         return F.Div.apply(self, other)
+
+    def __matmul__(self, other):
+        """
+
+        Args:
+            other: other tensor to matmul
+
+        Returns:
+            Tensor: result after matmul
+        """
+        return F.Matmul.apply(self, other)
+
+    def reLu(self):
+        return F.ReLu.apply(self)

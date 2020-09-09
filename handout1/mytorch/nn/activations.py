@@ -6,8 +6,8 @@ class ReLU(Module):
     """ReLU activation function
 
     Example:
-    >>> relu = ReLU()
-    >>> relu(input_tensor)
+    # >>> relu = ReLU()
+    # >>> relu(input_tensor)
     <some output>
 
     We run this class like a function because of Module.__call__().
@@ -28,6 +28,6 @@ class ReLU(Module):
         """
 
         # Complete ReLU(Function) class in functional.py, then just call it here
-        raise Exception("TODO!")
+        return F.ReLu.apply(x)
 
 # You can define more activation functions below (after hw1p1)
