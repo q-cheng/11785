@@ -7,7 +7,7 @@ from mytorch.optim.optimizer import Optimizer
 class SGD(Optimizer):
     """Stochastic Gradient Descent optimizer.
     
-    >>> optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9)
+    # >>> optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9)
     
     Args:
         params (dict): <some module>.parameters()
@@ -27,4 +27,7 @@ class SGD(Optimizer):
 
     def step(self):
         """Updates params based on gradients stored in param tensors"""
-        raise Exception("TODO: Implement SGD.step()")
+        for idx, t in enumerate(self.params):
+            t.data = np.subtract(t.data, np.multiply(t.grad.data, self.lr))
+            self.momentums[idx] = self.momentum * self.momentums[idx] - np.multiply(self.lr, t.grad.data)
+        return
