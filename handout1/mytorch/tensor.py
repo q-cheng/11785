@@ -181,3 +181,12 @@ class Tensor:
 
     def reLu(self):
         return F.ReLu.apply(self)
+
+    def batch_mean(self):
+        return F.BatchMean.apply(self)
+
+    def square(self):
+        return F.Square.apply(self)
+
+    def sqrt(self):
+        return F.SquareRoot.apply(self)

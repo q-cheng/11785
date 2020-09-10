@@ -280,11 +280,7 @@ class ReLu(Function):
         if not type(x).__name__ == 'Tensor':
             raise Exception("args must be Tensors.")
         requires_grad = x.requires_grad
-
-        # Save inputs to access later in backward pass.
-        # print('x_before:', x, type(x).__name__)
         ctx.save_for_backward(x, )
-        # x.data[x.data < 0] = 0
         c = tensor.Tensor(np.where(x.data < 0, 0, x.data), requires_grad=requires_grad,
                           is_leaf=not requires_grad)
         return c
@@ -293,8 +289,6 @@ class ReLu(Function):
     def backward(ctx, grad_output):
         # retrieve forward inputs that we stored
         x, = ctx.saved_tensors
-        # print('x_after:', x, type(x).__name__)
-        # calculate gradient of output w.r.t. each input
         grad_x = np.where(x.data >= 0, 1, 0) * grad_output.data
         # the order of gradients returned should match the order of the arguments
         return tensor.Tensor(grad_x),
@@ -330,6 +324,62 @@ class Matmul(Function):
 
         # the order of gradients returned should match the order of the arguments
         return tensor.Tensor(grad_a), tensor.Tensor(grad_b)
+
+
+class BatchMean(Function):
+    @staticmethod
+    def forward(ctx, a):
+        if not (type(a).__name__ == 'Tensor'):
+            raise Exception("Both args must be Tensors: {}".format(type(a).__name__))
+        ctx.save_for_backward(a, )
+        requires_grad = a.requires_grad
+        c = tensor.Tensor(np.mean(a.data, axis=tuple(range(a.data.ndim - 1))), requires_grad=requires_grad,
+                          is_leaf=not requires_grad)
+        return c
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        a, = ctx.saved_tensors
+        # Divide back_grad by N, where n in batch_size.
+        grad_a = np.ones(a.data.shape) * grad_output.data / a.data.shape[0]
+        return tensor.Tensor(grad_a),
+
+
+class Square(Function):
+    @staticmethod
+    def forward(ctx, a):
+        if not (type(a).__name__ == 'Tensor'):
+            raise Exception("Both args must be Tensors: {}".format(type(a).__name__))
+        ctx.save_for_backward(a, )
+        requires_grad = a.requires_grad
+        c = tensor.Tensor(np.square(a.data), requires_grad=requires_grad,
+                          is_leaf=not requires_grad)
+        return c
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        a, = ctx.saved_tensors
+        grad_a = grad_output.data * 2 * a.data
+        return tensor.Tensor(grad_a),
+
+
+class SquareRoot(Function):
+    @staticmethod
+    def forward(ctx, a):
+        if not (type(a).__name__ == 'Tensor'):
+            raise Exception("Both args must be Tensors: {}".format(type(a).__name__))
+        ctx.save_for_backward(a, )
+        requires_grad = a.requires_grad
+        c = tensor.Tensor(np.sqrt(a.data), requires_grad=requires_grad,
+                          is_leaf=not requires_grad)
+        return c
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        a, = ctx.saved_tensors
+        # Divide back_grad by N, where n in batch_size.
+        grad_a = 0.5 * grad_output.data / np.sqrt(a.data)
+        return tensor.Tensor(grad_a),
 
 
 def resize_grad(input_tensor, target_tensor):
