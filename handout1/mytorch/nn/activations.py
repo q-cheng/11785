@@ -28,6 +28,6 @@ class ReLU(Module):
         """
 
         # Complete ReLU(Function) class in functional.py, then just call it here
-        return F.ReLu.apply(x)
+        return x.reLu()
 
 # You can define more activation functions below (after hw1p1)

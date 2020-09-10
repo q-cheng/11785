@@ -282,25 +282,22 @@ class ReLu(Function):
         requires_grad = x.requires_grad
 
         # Save inputs to access later in backward pass.
-        ctx.save_for_backward(x)
-
-        x.data[x.data < 0] = 0
-        c = tensor.Tensor(x.data, requires_grad=requires_grad,
+        # print('x_before:', x, type(x).__name__)
+        ctx.save_for_backward(x, )
+        # x.data[x.data < 0] = 0
+        c = tensor.Tensor(np.where(x.data < 0, 0, x.data), requires_grad=requires_grad,
                           is_leaf=not requires_grad)
         return c
 
     @staticmethod
     def backward(ctx, grad_output):
         # retrieve forward inputs that we stored
-        x = ctx.saved_tensors
-
+        x, = ctx.saved_tensors
+        # print('x_after:', x, type(x).__name__)
         # calculate gradient of output w.r.t. each input
-        grad_reLu = x.copy()
-        grad_reLu = grad_output
-        grad_x = np.ones(x.shape) * grad_output.data * x.data
-
+        grad_x = np.where(x.data >= 0, 1, 0) * grad_output.data
         # the order of gradients returned should match the order of the arguments
-        return tensor.Tensor(grad_x)
+        return tensor.Tensor(grad_x),
 
 
 class Matmul(Function):
@@ -326,10 +323,27 @@ class Matmul(Function):
     def backward(ctx, grad_output):
         # retrieve forward inputs that we stored
         a, b = ctx.saved_tensors
-
+        # print('grad:', grad_output.data, '\na:', a, '\nb:', b)
         # calculate gradient of output w.r.t. each input
-        grad_a = np.ones(a.shape) * grad_output.data / b.data
-        grad_b = -1 * np.ones(b.shape) * grad_output.data * a.data / (b.data * b.data)
+        grad_a = np.dot(grad_output.data, b.data)
+        grad_b = np.dot(grad_output.data.T, a.data)
 
         # the order of gradients returned should match the order of the arguments
         return tensor.Tensor(grad_a), tensor.Tensor(grad_b)
+
+
+def resize_grad(input_tensor, target_tensor):
+    index_list = []
+
+    for cur_idx in range(len(input_tensor.data.shape)):
+        if cur_idx > len(target_tensor.data.shape) - 1:
+            index_list.append((0, len(input_tensor.data.shape) - 1 - cur_idx))
+        elif target_tensor.data.shape[len(target_tensor.data.shape) - 1 - cur_idx] == 1:
+            index_list.append((1, len(input_tensor.data.shape) - 1 - cur_idx))
+
+    for flag, idx in index_list:
+        if flag == 0:
+            input_tensor.data = np.sum(input_tensor.data, axis=idx)
+        else:
+            input_tensor.data = np.sum(input_tensor.data, axis=idx, keepdims=True)
+    return

@@ -9,6 +9,7 @@ class Optimizer():
 
     def step(self):
         """Called after generating gradients; updates network weights."""
+        print('para:', self.params)
         raise NotImplementedError
 
     def zero_grad(self):
