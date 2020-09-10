@@ -340,8 +340,8 @@ class BatchMean(Function):
     @staticmethod
     def backward(ctx, grad_output):
         a, = ctx.saved_tensors
-        # Divide back_grad by N, where n in batch_size.
-        grad_a = np.ones(a.data.shape) * grad_output.data / a.data.shape[0]
+        # Sum the grad_output to make sure the same batch has the same gradient, send it back.
+        grad_a = np.ones(a.shape) * np.mean(grad_output.data, axis=tuple(range(grad_output.data.ndim - 1)))
         return tensor.Tensor(grad_a),
 
 
@@ -359,7 +359,7 @@ class Square(Function):
     @staticmethod
     def backward(ctx, grad_output):
         a, = ctx.saved_tensors
-        grad_a = grad_output.data * 2 * a.data
+        grad_a = np.ones(a.shape) * grad_output.data * 2 * a.data
         return tensor.Tensor(grad_a),
 
 
@@ -382,18 +382,79 @@ class SquareRoot(Function):
         return tensor.Tensor(grad_a),
 
 
-def resize_grad(input_tensor, target_tensor):
-    index_list = []
+class BatchSum(Function):
+    @staticmethod
+    def forward(ctx, a):
+        if not (type(a).__name__ == 'Tensor'):
+            raise Exception("Both args must be Tensors: {}".format(type(a).__name__))
+        ctx.save_for_backward(a, )
+        requires_grad = a.requires_grad
+        c = tensor.Tensor(np.sum(a.data, axis=0), requires_grad=requires_grad,
+                          is_leaf=not requires_grad)
+        return c
 
-    for cur_idx in range(len(input_tensor.data.shape)):
-        if cur_idx > len(target_tensor.data.shape) - 1:
-            index_list.append((0, len(input_tensor.data.shape) - 1 - cur_idx))
-        elif target_tensor.data.shape[len(target_tensor.data.shape) - 1 - cur_idx] == 1:
-            index_list.append((1, len(input_tensor.data.shape) - 1 - cur_idx))
+    @staticmethod
+    def backward(ctx, grad_output):
+        a, = ctx.saved_tensors
+        # Divide back_grad by N, where n in batch_size.
+        grad_a = np.ones(a.shape) * grad_output.data
+        return tensor.Tensor(grad_a),
 
-    for flag, idx in index_list:
-        if flag == 0:
-            input_tensor.data = np.sum(input_tensor.data, axis=idx)
-        else:
-            input_tensor.data = np.sum(input_tensor.data, axis=idx, keepdims=True)
-    return
+
+# class BatchNormTrain(Function):
+#     @staticmethod
+#     def forward(ctx, x):
+#         if not (type(a).__name__ == 'Tensor'):
+#             raise Exception("Both args must be Tensors: {}".format(type(a).__name__))
+#         ctx.save_for_backward(x, )
+#         requires_grad = x.requires_grad
+#         u_b = np.mean(x.data, axis=tuple(range(x.data.ndim - 1)))
+#         s_b_square = np.var(x.data, axis=tuple(range(x.data.ndim - 1)))
+#         c = tensor.Tensor(np.sum(a.data, axis=0), requires_grad=requires_grad,
+#                           is_leaf=not requires_grad)
+#         return c
+#
+#     @staticmethod
+#     def backward(ctx, grad_output):
+#         x, = ctx.saved_tensors
+#         # Divide back_grad by N, where n in batch_size.
+#         grad_x = np.ones(x.shape) * grad_output.data
+#         return tensor.Tensor(grad_x),
+#
+#
+# class BatchNormTrainNotTrain:
+#     @staticmethod
+#     def forward(ctx, x):
+#         if not (type(a).__name__ == 'Tensor'):
+#             raise Exception("Both args must be Tensors: {}".format(type(a).__name__))
+#         ctx.save_for_backward(x, )
+#         requires_grad = x.requires_grad
+#         u_b = np.mean(x.data, axis=tuple(range(x.data.ndim - 1)))
+#         s_b_square = np.var(x.data, axis=tuple(range(x.data.ndim - 1)))
+#         c = tensor.Tensor(np.sum(a.data, axis=0), requires_grad=requires_grad,
+#                           is_leaf=not requires_grad)
+#         return c
+#
+#     @staticmethod
+#     def backward(ctx, grad_output):
+#         x, = ctx.saved_tensors
+#         # Divide back_grad by N, where n in batch_size.
+#         grad_x = np.ones(x.shape) * grad_output.data
+#         return tensor.Tensor(grad_x),
+
+
+# def resize_grad(input_tensor, target_tensor):
+#     index_list = []
+#
+#     for cur_idx in range(len(input_tensor.data.shape)):
+#         if cur_idx > len(target_tensor.data.shape) - 1:
+#             index_list.append((0, len(input_tensor.data.shape) - 1 - cur_idx))
+#         elif target_tensor.data.shape[len(target_tensor.data.shape) - 1 - cur_idx] == 1:
+#             index_list.append((1, len(input_tensor.data.shape) - 1 - cur_idx))
+#
+#     for flag, idx in index_list:
+#         if flag == 0:
+#             input_tensor.data = np.sum(input_tensor.data, axis=idx)
+#         else:
+#             input_tensor.data = np.sum(input_tensor.data, axis=idx, keepdims=True)
+#     return

@@ -190,3 +190,6 @@ class Tensor:
 
     def sqrt(self):
         return F.SquareRoot.apply(self)
+
+    def batch_sum(self):
+        return F.BatchSum.apply(self)
