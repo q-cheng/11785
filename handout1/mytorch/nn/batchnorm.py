@@ -1,6 +1,7 @@
 from mytorch.tensor import Tensor
 import numpy as np
 from mytorch.nn.module import Module
+import functools
 
 class BatchNorm1d(Module):
     """Batch Normalization Layer
@@ -39,4 +40,21 @@ class BatchNorm1d(Module):
         Returns:
             Tensor: (batch_size, num_features)
         """
-        raise Exception("TODO!")
+        if self.is_train:
+            u_b = x.data.mean()
+            x_sub_u_b = x.data - np.ones(x.data.shape) * u_b
+            x_sub_u_b_square = np.square(x_sub_u_b)
+            em_b_square = np.sum(x_sub_u_b_square) / (x_sub_u_b.size - 1)
+            self.running_mean.data = (1 - self.momentum.data) * self.running_mean.data + self.momentum.data * u_b
+            self.running_var.data = (1 - self.momentum.data) * self.running_var.data + self.momentum.data * em_b_square
+            s_b_square = np.sum(x_sub_u_b_square) / x_sub_u_b.size
+            x_norm = x_sub_u_b / (np.sqrt(s_b_square + self.eps.data))
+            y_i = self.gamma.data * x_norm + self.beta.data
+            # print('y_i:', y_i)
+            return Tensor(y_i)
+        else:
+            x_sub_u_b = x.data - np.ones(x.data.shape) * self.running_mean.data
+            x_norm = x_sub_u_b / (np.sqrt(self.running_var.data + self.eps.data))
+            y_i = self.gamma.data * x_norm + self.beta.data
+            # print('y_i:', y_i)
+            return Tensor(y_i)
