@@ -21,8 +21,8 @@ class CrossEntropyLoss(Loss):
     This class is for human use; just calls function in nn.functional.
     Does not need args to initialize.
     
-    >>> criterion = CrossEntropyLoss()
-    >>> criterion(outputs, labels)
+    # >>> criterion = CrossEntropyLoss()
+    # >>> criterion(outputs, labels)
     3.241
     """
     def __init__(self):

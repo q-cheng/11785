@@ -205,15 +205,32 @@ def cross_entropy(predicted, target):
         Tensor: the loss as a float, in a tensor of shape ()
     """
     batch_size, num_classes = predicted.shape
-
+    # print('predicted:', predicted)
+    x_mean = np.mean(predicted.data, axis=1, keepdims=True) * np.ones(predicted.data.shape)
+    # x_sum_exp_by_sample = x_mean
+    # print('x_mean:', x_mean, x_mean.shape)
+    softmax = np.exp(predicted.data) / np.sum(np.exp(predicted.data), axis=1, keepdims=True)
+    print('softmax:', softmax)
+    log_softmax = predicted.data - (x_mean + np.log(np.sum(np.exp(predicted.data - x_mean), axis=1, keepdims=True)))
+    # print(np.sum(np.exp(predicted.data - x_mean), keepdims=True))
+    # print('log_softmax:', log_softmax)
+    # print('target:', target)
+    loss_sum = 0
+    back_grad = np.ones(predicted.shape)
+    for i, j in enumerate(target.data):
+        loss_sum += log_softmax[i][j]
+        back_grad[i][j] = softmax[i][j] - 1
+        # print('loss:', loss_sum)
+    nll_loss = -1 * loss_sum / batch_size
     # Tip: You can implement XELoss all here, without creating a new subclass of Function.
     #      However, if you'd prefer to implement a Function subclass you're free to.
     #      Just be sure that nn.loss.CrossEntropyLoss calls it properly.
 
     # Tip 2: Remember to divide the loss by batch_size; this is equivalent
     #        to reduction='mean' in PyTorch's nn.CrossEntropyLoss
-
-    raise Exception("TODO: Implement XELoss for comp graph")
+    return_tensor = tensor.Tensor(nll_loss)
+    return_tensor.grad = back_grad
+    return return_tensor
 
 
 def to_one_hot(arr, num_classes):
@@ -252,10 +269,6 @@ def check(a, b):
     if a.shape == b.shape:
         return True
     else:
-        # try:
-        #     np.broadcast(a, b)
-        # except:
-        #     raise Exception("Could not broadcast matrix with shape {} and shape {}".format(a.shape, b.shape))
         if len(a.shape) > len(b.shape):
             new_b = [1 for _ in range(len(a.shape))]
             for idx in range(len(b.shape)):
@@ -382,23 +395,23 @@ class SquareRoot(Function):
         return tensor.Tensor(grad_a),
 
 
-class BatchSum(Function):
-    @staticmethod
-    def forward(ctx, a):
-        if not (type(a).__name__ == 'Tensor'):
-            raise Exception("Both args must be Tensors: {}".format(type(a).__name__))
-        ctx.save_for_backward(a, )
-        requires_grad = a.requires_grad
-        c = tensor.Tensor(np.sum(a.data, axis=0), requires_grad=requires_grad,
-                          is_leaf=not requires_grad)
-        return c
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        a, = ctx.saved_tensors
-        # Divide back_grad by N, where n in batch_size.
-        grad_a = np.ones(a.shape) * grad_output.data
-        return tensor.Tensor(grad_a),
+# class BatchSum(Function):
+#     @staticmethod
+#     def forward(ctx, a):
+#         if not (type(a).__name__ == 'Tensor'):
+#             raise Exception("Both args must be Tensors: {}".format(type(a).__name__))
+#         ctx.save_for_backward(a, )
+#         requires_grad = a.requires_grad
+#         c = tensor.Tensor(np.sum(a.data, axis=0), requires_grad=requires_grad,
+#                           is_leaf=not requires_grad)
+#         return c
+#
+#     @staticmethod
+#     def backward(ctx, grad_output):
+#         a, = ctx.saved_tensors
+#         # Divide back_grad by N, where n in batch_size.
+#         grad_a = np.ones(a.shape) * grad_output.data
+#         return tensor.Tensor(grad_a),
 
 
 # class BatchNormTrain(Function):
