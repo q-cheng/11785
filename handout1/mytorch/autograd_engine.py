@@ -26,7 +26,8 @@ def backward(grad_fn, grad_of_outputs):
                 grad_of_outputs.data = np.sum(grad_of_outputs.data, axis=idx)
             else:
                 grad_of_outputs.data = np.sum(grad_of_outputs.data, axis=idx, keepdims=True)
-
+    if not grad_fn:
+        return
     new_grads = grad_fn.apply(grad_of_outputs)
 
     # 2) Pass gradient onto current node's beloved parents (recursive DFS)

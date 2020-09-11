@@ -204,33 +204,53 @@ def cross_entropy(predicted, target):
     Returns:
         Tensor: the loss as a float, in a tensor of shape ()
     """
-    batch_size, num_classes = predicted.shape
-    # print('predicted:', predicted)
-    x_mean = np.mean(predicted.data, axis=1, keepdims=True) * np.ones(predicted.data.shape)
-    # x_sum_exp_by_sample = x_mean
-    # print('x_mean:', x_mean, x_mean.shape)
-    softmax = np.exp(predicted.data) / np.sum(np.exp(predicted.data), axis=1, keepdims=True)
-    print('softmax:', softmax)
-    log_softmax = predicted.data - (x_mean + np.log(np.sum(np.exp(predicted.data - x_mean), axis=1, keepdims=True)))
-    # print(np.sum(np.exp(predicted.data - x_mean), keepdims=True))
-    # print('log_softmax:', log_softmax)
-    # print('target:', target)
-    loss_sum = 0
-    back_grad = np.ones(predicted.shape)
-    for i, j in enumerate(target.data):
-        loss_sum += log_softmax[i][j]
-        back_grad[i][j] = softmax[i][j] - 1
-        # print('loss:', loss_sum)
-    nll_loss = -1 * loss_sum / batch_size
-    # Tip: You can implement XELoss all here, without creating a new subclass of Function.
-    #      However, if you'd prefer to implement a Function subclass you're free to.
-    #      Just be sure that nn.loss.CrossEntropyLoss calls it properly.
+    return predicted.get_loss(target)
+    # batch_size, num_classes = predicted.shape
+    # x_mean = np.mean(predicted.data, axis=1, keepdims=True) * np.ones(predicted.data.shape)
+    # softmax = np.exp(predicted.data) / np.sum(np.exp(predicted.data), axis=1, keepdims=True)
+    # log_softmax = predicted.data - (x_mean + np.log(np.sum(np.exp(predicted.data - x_mean), axis=1, keepdims=True)))
+    # loss_sum = 0
+    # back_grad = np.ones(predicted.shape)
+    # for i, j in enumerate(target.data):
+    #     loss_sum += log_softmax[i][j]
+    #     back_grad[i][j] = softmax[i][j] - 1
+    # nll_loss = -1 * loss_sum / batch_size
+    # # Tip: You can implement XELoss all here, without creating a new subclass of Function.
+    # #      However, if you'd prefer to implement a Function subclass you're free to.
+    # #      Just be sure that nn.loss.CrossEntropyLoss calls it properly.
+    #
+    # # Tip 2: Remember to divide the loss by batch_size; this is equivalent
+    # #        to reduction='mean' in PyTorch's nn.CrossEntropyLoss
+    # return_tensor = tensor.Tensor(nll_loss)
+    # return_tensor.grad_fn = predicted.grad_fn
+    # return return_tensor
 
-    # Tip 2: Remember to divide the loss by batch_size; this is equivalent
-    #        to reduction='mean' in PyTorch's nn.CrossEntropyLoss
-    return_tensor = tensor.Tensor(nll_loss)
-    return_tensor.grad = back_grad
-    return return_tensor
+
+class Loss(Function):
+    @staticmethod
+    def forward(ctx, predicted, target):
+        if not (type(predicted).__name__ == 'Tensor' and type(target).__name__ == 'Tensor'):
+            raise Exception("Both args must be Tensors: {}, {}".format(type(predicted).__name__, type(target).__name__))
+        batch_size, num_classes = predicted.shape
+        x_max = np.max(predicted.data, axis=1, keepdims=True) * np.ones(predicted.data.shape)
+        log_softmax = predicted.data - (x_max + np.log(np.sum(np.exp(predicted.data - x_max), axis=1, keepdims=True)))
+        mask = to_one_hot(target, num_classes)
+        back_grad = np.exp(log_softmax)
+        loss_sum = np.sum(mask.data * log_softmax)
+        back_grad = back_grad - mask.data
+        back_grad = back_grad / batch_size
+        back_grad_tensor = tensor.Tensor(back_grad)
+        nll_loss = -1 * loss_sum / batch_size
+        ctx.save_for_backward(back_grad_tensor,)
+        requires_grad = predicted.requires_grad or target.grad
+        c = tensor.Tensor(nll_loss, requires_grad=requires_grad,
+                          is_leaf=not requires_grad)
+        return c
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        back_grad_tensor, = ctx.saved_tensors
+        return back_grad_tensor,
 
 
 def to_one_hot(arr, num_classes):

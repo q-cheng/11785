@@ -193,3 +193,6 @@ class Tensor:
 
     def batch_sum(self):
         return F.BatchSum.apply(self)
+
+    def get_loss(self, target):
+        return F.Loss.apply(self, target)
