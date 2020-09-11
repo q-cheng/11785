@@ -12,7 +12,10 @@ def backward(grad_fn, grad_of_outputs):
     """
 
     # 1) Calculate gradients of final node w.r.t. to the current nodes parents
-    if grad_fn and grad_fn.function_name == "AccumulateGrad" and grad_of_outputs.data.shape != grad_fn.variable.shape:
+    if not grad_fn:
+        return
+
+    if grad_fn.function_name == "AccumulateGrad" and grad_of_outputs.data.shape != grad_fn.variable.shape:
         index_list = []
 
         for cur_idx in range(len(grad_of_outputs.data.shape)):
@@ -26,8 +29,7 @@ def backward(grad_fn, grad_of_outputs):
                 grad_of_outputs.data = np.sum(grad_of_outputs.data, axis=idx)
             else:
                 grad_of_outputs.data = np.sum(grad_of_outputs.data, axis=idx, keepdims=True)
-    if not grad_fn:
-        return
+
     new_grads = grad_fn.apply(grad_of_outputs)
 
     # 2) Pass gradient onto current node's beloved parents (recursive DFS)
