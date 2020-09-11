@@ -44,9 +44,8 @@ class BatchNorm1d(Module):
         if self.is_train:
             u_b = x.batch_mean()
             x_sub_u_b = x - u_b
-            x_sub_u_b_square = x_sub_u_b.square()
-            em_b_square = x_sub_u_b_square.data / (self.num_features - 1)
-            s_b_square = x_sub_u_b_square.batch_mean()
+            s_b_square = x_sub_u_b.square().batch_mean()
+            em_b_square = s_b_square.data / (x.data.shape[0] - 1) * x.data.shape[0]
             self.running_mean.data = (1 - self.momentum.data) * self.running_mean.data + self.momentum.data * u_b.data
             self.running_var.data = (1 - self.momentum.data) * self.running_var.data + self.momentum.data * em_b_square
         else:
