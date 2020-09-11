@@ -28,6 +28,6 @@ class SGD(Optimizer):
     def step(self):
         """Updates params based on gradients stored in param tensors"""
         for idx, t in enumerate(self.params):
-            t.data = np.subtract(t.data, np.multiply(t.grad.data, self.lr))
             self.momentums[idx] = self.momentum * self.momentums[idx] - np.multiply(self.lr, t.grad.data)
+            t.data = np.add(t.data, self.momentums[idx])
         return
